@@ -74,3 +74,21 @@ async def delete_book(book_id: int, token: str = Depends(is_logged_in)):
             return {"message": "Book deleted successfully"}
             
     raise HTTPException(status_code=404, detail="Book not found")
+
+# Updated Schema for PATCH
+class BookUpdate(BaseModel):
+    title: Optional[str] = None
+    author: Optional[str] = None
+    rating: Optional[float] = Field(None, gt=0, le=5)
+
+# PATCH: Update only specific fields
+@app.patch("/books/{book_id}")
+async def patch_book(book_id: int, update_data: BookUpdate, token: str = Depends(is_logged_in)): # Async logic to update only specific fields of a book in the database
+    for book in books_db:
+        if book["id"] == book_id:
+            # model_dump(exclude_unset=True) is the key here
+            data = update_data.model_dump(exclude_unset=True)
+            for key, value in data.items():
+                book[key] = value
+            return {"message": "Updated successfully", "updated_book": book}
+    raise HTTPException(status_code=404, detail="Book not found") # This route allows you to update only the fields you want by sending only those fields in the request body.
