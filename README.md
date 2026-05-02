@@ -1,6 +1,6 @@
 # 📚 FastAPI Book Management API
 
-A simple and efficient REST API built with **FastAPI** to manage a collection of books. This project demonstrates core FastAPI fundamentals including Routing, Pydantic validation, and Dependency Injection. It store new book details, update current ones, remove any. A;so we can view the book details.
+A simple and efficient REST API built with **FastAPI** to manage a collection of books. This project demonstrates core FastAPI fundamentals including Routing, Pydantic validation, and Dependency Injection. It store new book details, update current ones, remove any. Also we can view the book details.
 
 ## 🚀 Features
 
