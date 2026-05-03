@@ -4,6 +4,12 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from typing import List, Optional
+from models import BookModel # Import the model
+from database import SessionLocal, engine, Base # Import the database
+from sqlalchemy.orm import Session
+
+Base.metadata.create_all(bind=engine)
+
 
 app = FastAPI(title="Fast API Tutorial")#
 
@@ -21,10 +27,12 @@ class BookUpdate(BaseModel):
     rating: Optional[float] = Field(None, gt=0, le=5)
 
 # Temporary In-memory Database
-books_db = [
-    {"id": 1, "title": "Madol Duwa", "author": "Martin Wickramasinghe", "rating": 4.5},
-    {"id": 2, "title": "Gamperaliya", "author": "Martin Wickramasinghe", "rating": 4.8}
-]
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # DEPENDENCY INJECTION 
 # Reusable logic to check authentication before accessing certain routes
@@ -38,39 +46,49 @@ def is_logged_in(user_token: str = Query(...)):
 
 # READ: Get all books (Public route)
 @app.get("/books", response_model=List[Book])
-async def get_all_books():# Async logic to fetch all books from the database
-    return books_db
+async def get_all_books(db: Session = Depends(get_db)): # Async logic to fetch all books from the database
+    books = db.query(BookModel).all() # Query the database for all books
+    return books
 
 # CREATE: Add a new book (Requires Dependency)
 @app.post("/books")
-async def add_book(book: Book, token: str = Depends(is_logged_in)):
-    books_db.append(book.model_dump())# Async logic to add a new book to the database
-    return {"message": "Book added successfully"}
+async def add_book(book: Book, db: Session = Depends(get_db), token: str = Depends(is_logged_in)): # Async logic to add a new book to the database
+    new_book = BookModel(id = book.id, title = book.title, author = book.author, rating = book.rating) # create a new book instance
+    db.add(new_book) # add the new book to the database
+    db.commit() # commit the changes
+    db.refresh(new_book) # refresh the new book
+    return {"message": "Book added successfully" , "Book": new_book}
 
 # UPDATE: Update an existing book (Requires Dependency)
 # 2. PATCH Route: Updates only the fields you send in the request body
 @app.patch("/books/{book_id}")
-async def patch_book(book_id: int, update_data: BookUpdate, token: str = Depends(is_logged_in)):
-    for book in books_db:
-        if book["id"] == book_id:
-            # Get only the fields that were actually sent in the request
-            data = update_data.model_dump(exclude_unset=True)# Async logic to update the book details in the database
+async def patch_book(book_id: int, update_data: BookUpdate, db: Session = Depends(get_db), token: str = Depends(is_logged_in)):
+    # Query the book from the database
+    db_book = db.query(BookModel).filter(BookModel.id == book_id).first()
+    
+    if db_book:
+        # Get only the fields that were actually sent in the request
+        data = update_data.model_dump(exclude_unset=True)
+        
+        # Update the book details with new data
+        for key, value in data.items():
+            setattr(db_book, key, value)
             
-            # Update the book details with new data
-            for key, value in data.items():# Update only the fields that were sent in the request
-                book[key] = value
-                
-            return {"message": "Updated successfully", "updated_book": book}
-            
+        db.commit()
+        db.refresh(db_book)
+        return {"message": "Updated successfully", "updated_book": db_book}
+        
     raise HTTPException(status_code=404, detail="Book not found")
 
 # DELETE: Remove a book (Requires Dependency)
 @app.delete("/books/{book_id}")
-async def delete_book(book_id: int, token: str = Depends(is_logged_in)):
-    # Async logic to find and remove the book
-    for index, book in enumerate(books_db):
-        if book["id"] == book_id:
-            books_db.pop(index)# Remove the book from the database
-            return {"message": "Book deleted successfully"}
-            
+async def delete_book(book_id: int, db: Session = Depends(get_db), token: str = Depends(is_logged_in)):
+    # Query the book from the database
+    db_book = db.query(BookModel).filter(BookModel.id == book_id).first()
+    
+    if db_book:
+        db.delete(db_book)
+        db.commit()
+        return {"message": "Book deleted successfully"}
+        
     raise HTTPException(status_code=404, detail="Book not found")

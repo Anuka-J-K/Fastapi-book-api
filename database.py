@@ -1,7 +1,7 @@
 # database.py
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine #create_engine is used to create a connection to the database
+from sqlalchemy.ext.declarative import declarative_base #declarative_base is used to create a base class for our models
+from sqlalchemy.orm import sessionmaker #sessionmaker is used to create a session factory
 
 # Database file location
 SQLALCHEMY_DATABASE_URL = "sqlite:///./books.db"
