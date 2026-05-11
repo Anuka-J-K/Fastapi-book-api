@@ -48,7 +48,7 @@ uvicorn main:app --reload
 ## 📖 API Documentation
 
 Once the server is running, you can access the interactive API documentation at:
-- **Swagger UI**: [http://127.0.0](http://127.0.0)
+- **Swagger UI**: [http://127.0.0](http://127.0.0.1)
 
 ## 🔑 Usage Note
 To perform **Create, Update, or Delete** operations, you must provide a query parameter: `user_token=valid`
